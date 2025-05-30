@@ -52,7 +52,7 @@ class WebCrawler:
 def main():
     crawler = WebCrawler()
     start_url = "https://example.com"
-    crawler.crawL(start_url)  # Fixed typo here
+    crawler.crawl(start_url)  # Fixed typo here
 
     keyword = "test"
     results = crawler.search(keyword)
