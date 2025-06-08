@@ -2,6 +2,10 @@ import requests
 from bs4 import BeautifulSoup
 from collections import defaultdict
 from urllib.parse import urljoin, urlparse
+import logging
+
+# Set up logging configuration
+logging.basicConfig(level=logging.DEBUG)
 
 class WebCrawler:
     def __init__(self):
@@ -15,6 +19,12 @@ class WebCrawler:
 
         try:
             response = requests.get(url)
+            # Check if the content is HTML
+            content_type = response.headers.get('Content-Type', '').lower()
+            if 'html' not in content_type:
+                logging.warning(f"Skipping non-HTML content: {url}")
+                return
+
             soup = BeautifulSoup(response.text, 'html.parser')
             self.index[url] = soup.get_text()
 
@@ -32,7 +42,7 @@ class WebCrawler:
                         self.crawl(href, base_url=base_url or url)
 
         except Exception as e:
-            print(f"Error crawling {url}: {e}")
+            logging.error(f"Error crawling {url}: {e}")
 
     def search(self, keyword):
         results = []
@@ -86,8 +96,6 @@ class WebCrawlerTests(unittest.TestCase):
 
         crawler = WebCrawler()
         crawler.crawl("https://example.com")
-
-     
 
     def test_search(self):
         crawler = WebCrawler()
