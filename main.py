@@ -102,6 +102,68 @@ class WebCrawlerTests(unittest.TestCase):
         crawler = WebCrawler()
         crawler.print_results(["https://test.com/result"])
 
+    @patch('requests.get')
+    def test_empty_html(self, mock_get):
+        sample_html = ""
+        mock_response = MagicMock()
+        mock_response.text = sample_html
+        mock_get.return_value = mock_response
+
+        crawler = WebCrawler()
+        crawler.crawl("https://example.com")
+
+        # Check if the index is still empty
+        self.assertEqual(len(crawler.index), 1)
+        self.assertEqual(crawler.index["https://example.com"], "")
+
+    @patch('requests.get')
+    def test_non_html_content(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.headers = {'Content-Type': 'application/pdf'}
+        mock_get.return_value = mock_response
+
+        crawler = WebCrawler()
+        crawler.crawl("https://example.com")
+
+        # Ensure we don't try to parse non-HTML content
+        self.assertNotIn("https://example.com", crawler.index)
+
+    @patch('requests.get')
+    def test_malformed_url(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.text = "<html><body><a href='htp://example.com'>Broken Link</a></body></html>"
+        mock_get.return_value = mock_response
+
+        crawler = WebCrawler()
+        crawler.crawl("https://example.com")
+
+        # Check that malformed URL was handled
+        self.assertNotIn("htp://example.com", crawler.visited)  # Should not crawl malformed URLs
+
+    def test_multiple_keyword_occurrences(self):
+        crawler = WebCrawler()
+        crawler.index["page1"] = "This page has the keyword multiple times: keyword keyword."
+        crawler.index["page2"] = "No keyword here."
+
+        results = crawler.search("keyword")
+        self.assertEqual(results, ["page2"])  # Should only return "page2" since it's the only one without the keyword
+
+    @patch('requests.get')
+    def test_infinite_loop(self, mock_get):
+        sample_html = """
+        <html><body>
+            <a href="https://example.com">Go to Example</a>
+        </body></html>
+        """
+        mock_response = MagicMock()
+        mock_response.text = sample_html
+        mock_get.return_value = mock_response
+
+        crawler = WebCrawler()
+        crawler.crawl("https://example.com")
+
+        # Check that we don't keep revisiting the same page
+        self.assertEqual(len(crawler.visited), 1)  # Only one URL should be visited
 
 if __name__ == "__main__":
     unittest.main()  # Run unit tests
